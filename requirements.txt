@@ -1,0 +1,6 @@
+requests>=2.25.1
+dialogflow>=1.1.0
+slack-bolt>=1.1.3
+slack_sdk>=3.1.0
+google-api-core>=1.24.1
+python-dotenv>=0.15.0
