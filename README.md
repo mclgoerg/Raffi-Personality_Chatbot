@@ -6,8 +6,15 @@ It uses Slack, Dialogflow and [MiPinG](https://github.com/mclgoerg/MiningPersona
 
 ## Installation
 
-Placeholder
+Rename .env.example to .env  
+Fill the .env  
 
+Run
 ```bash
-Placeholder
+pip install .
+```
+
+Run
+```bash
+main.py
 ```
