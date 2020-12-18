@@ -1,8 +1,4 @@
-*private_key.json
-*private_key01.json
-*private_key2.json
-*output.json
-*users.json
-*users_all.json
+*.json
 *.env
 venv/
+.idea
