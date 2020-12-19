@@ -75,10 +75,8 @@ def handle_user_message(userid, chat_text):
                 user.messages.append(chat_text)
                 break
         else:
-            # users.append(User(message["user"], [message["text"]]))
             users.append(User(userid, [chat_text], [], {}, random.randint(1, 100000)))
     else:
-        # users = [User(message["user"], [message["text"]])]
         users = [User(userid, [chat_text], [], {}, random.randint(1, 100000))]
 
 
@@ -87,29 +85,23 @@ def handle_user_dialog(userid, dialog_text):
     if users:
         for user in users:
             if userid == user.userId:
-                # user.messages.append(message["text"])
                 user.dialogMessages.append(dialog_text)
                 break
         else:
-            # users.append(User(message["user"], [message["text"]]))
             users.append(User(userid, [], [dialog_text], {}, random.randint(1, 100000)))
     else:
-        # users = [User(message["user"], [message["text"]])]
         users = [User(userid, [], [dialog_text], {}, random.randint(1, 100000))]
 
 
 def addBigFive(userid, bigFive):
     for user in users:
         if userid == user.userId:
-            # user.bigFive.append(bigFive)
             user.bigFive = bigFive
 
 
 def get_message_length(userid):
     for user in users:
         if userid == user.userId:
-            # allmessages = " ".join(user.messages)
-            # return len(allmessages.split())
             return len(" ".join(user.messages).split())
 
 
@@ -132,7 +124,6 @@ def write_json(data, filename='output.json'):
 
 
 def clear_messages(userid):
-    # print([user.__dict__ for user in users])
     for user in users:
         if userid == user.userId and len(user.messages) != 0:
             print(user.messages)
@@ -147,9 +138,6 @@ def clear_messages(userid):
                 print("No dialog messages")
             return True
     return False
-    # evtl. überflüssig
-
-    # print([user.__dict__ for user in users])
 
 
 def clear_dialogmessages(userid):
@@ -259,6 +247,7 @@ def message_hello(message, say):
     # SESSION_ID = message['user']
     clean_msg = strip_message(message['text'])
     print("Clean msg: " + clean_msg)
+    requestURL = Helper.loadEnvKey("URL")
     if len(clean_msg) > 0:
         # Erzeuge users Datei
         fetch_users(app.client, app.logger)
@@ -324,32 +313,16 @@ def message_hello(message, say):
         print("DEBUG: Anzahl der Wörter: " + str(get_message_length(message["user"])))
         if get_message_length(message["user"]) >= 200:
 
-            """
-            response = requests.post('http://localhost:9000/slackpost', headers=headers, data=data.encode("utf-8"),
-                                     verify=False)
-
-            result = json.loads(response.content.decode("utf-8"))
-            print(result)
-            # with open("data.json", "w") as outfile:
-            #      json.dump(result, outfile)
-            print(json.dumps(result, indent=4, sort_keys=True))
-            result.pop("wordCount", None)
-
-            addBigFive(message["user"], result)
-            print([user.__dict__ for user in users])
-            """
             print("DEBUG: Du hast " + str(get_message_length(message["user"])) + " Wörter geschrieben.")
 
-            # for user in users:
-            #   if user.userId == message["user"]:
-            #      for big in user.bigFive:
-            #         print(big, user.bigFive[big])
-            #        say(big + ": " + str(user.bigFive[big]))
             for user in users:
                 if user.userId == message["user"]:
                     if len(user.dialogMessages) == 0:
                         try:
-                            response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                            #response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                            #                         data=data.encode("utf-8"),
+                            #                         verify=False)
+                            response = requests.post(requestURL, headers=headers,
                                                      data=data.encode("utf-8"),
                                                      verify=False)
                         except requests.exceptions.RequestException as e:
@@ -373,21 +346,15 @@ def message_hello(message, say):
                     if user.bigFive["big5_" + BIG_FIVE] >= 0.6:
                         print("hoher wert " + BIG_FIVE + ": " + str(user.bigFive["big5_" + BIG_FIVE]))
                         if len(user.dialogMessages) == 0:
-                            # say(detect_event_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, "abschluss_kennenlernen",
-                            #                       DIALOGFLOW_LANGUAGE_CODE))
                             say(detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]),
                                                    "abschluss_kennenlernen",
                                                    DIALOGFLOW_LANGUAGE_CODE))
-                            # reply = detect_event_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, "low_agreeableness",
-                            #                           DIALOGFLOW_LANGUAGE_CODE)
                             reply = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]),
                                                        "low_agreeableness",
                                                        DIALOGFLOW_LANGUAGE_CODE)
                             user.dialogMessages.append(reply)
                             say(reply)
                         else:
-                            # reply = detect_intent_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, [clean_msg[:256]],
-                            #                            DIALOGFLOW_LANGUAGE_CODE)
                             reply = detect_intent_texts(DIALOGFLOW_PROJECT_ID,
                                                         get_sessionid(message["user"])[clean_msg[:256]],
                                                         DIALOGFLOW_LANGUAGE_CODE)
@@ -399,7 +366,10 @@ def message_hello(message, say):
                                     user.dialogMessages.clear()
                                     new_sessionid(message["user"])
                                     try:
-                                        response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                                        #response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                                        #                         data=data.encode("utf-8"),
+                                        #                         verify=False)
+                                        response = requests.post(requestURL, headers=headers,
                                                                  data=data.encode("utf-8"),
                                                                  verify=False)
                                     except requests.exceptions.RequestException as e:
@@ -408,8 +378,6 @@ def message_hello(message, say):
 
                                     result = json.loads(response.content.decode("utf-8"))
                                     print(result)
-                                    # with open("data.json", "w") as outfile:
-                                    #      json.dump(result, outfile)
                                     print(json.dumps(result, indent=4, sort_keys=True))
                                     result.pop("wordCount", None)
 
@@ -421,21 +389,15 @@ def message_hello(message, say):
                     else:
                         print("niedriger wert " + BIG_FIVE + ": " + str(user.bigFive["big5_" + BIG_FIVE]))
                         if len(user.dialogMessages) == 0:
-                            # say(detect_event_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, "abschluss_kennenlernen",
-                            #                       DIALOGFLOW_LANGUAGE_CODE))
                             say(detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]),
                                                    "abschluss_kennenlernen",
                                                    DIALOGFLOW_LANGUAGE_CODE))
-                            # reply = detect_event_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, "high_agreeableness",
-                            #                           DIALOGFLOW_LANGUAGE_CODE)
                             reply = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]),
                                                        "high_agreeableness",
                                                        DIALOGFLOW_LANGUAGE_CODE)
                             user.dialogMessages.append(reply)
                             say(reply)
                         else:
-                            # reply = detect_intent_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, [clean_msg[:256]],
-                            #                            DIALOGFLOW_LANGUAGE_CODE)
                             reply = detect_intent_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]),
                                                         [clean_msg[:256]],
                                                         DIALOGFLOW_LANGUAGE_CODE)
@@ -447,7 +409,10 @@ def message_hello(message, say):
                                     user.dialogMessages.clear()
                                     new_sessionid(message["user"])
                                     try:
-                                        response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                                        #response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                                        #                         data=data.encode("utf-8"),
+                                        #                         verify=False)
+                                        response = requests.post(requestURL, headers=headers,
                                                                  data=data.encode("utf-8"),
                                                                  verify=False)
                                     except requests.exceptions.RequestException as e:
@@ -456,8 +421,6 @@ def message_hello(message, say):
 
                                     result = json.loads(response.content.decode("utf-8"))
                                     print(result)
-                                    # with open("data.json", "w") as outfile:
-                                    #      json.dump(result, outfile)
                                     print(json.dumps(result, indent=4, sort_keys=True))
                                     result.pop("wordCount", None)
 
@@ -470,27 +433,17 @@ def message_hello(message, say):
             save_to_file([user.__dict__ for user in users], "output.json")
 
         else:
-            # if get_message_count(message["user"]) == 1 or get_intent(DIALOGFLOW_PROJECT_ID, SESSION_ID,
-            #                                                         [clean_msg[:256]],
-            #                                                         DIALOGFLOW_LANGUAGE_CODE) == "Default Welcome Intent":
             if get_message_count(message["user"]) == 1 or get_intent(DIALOGFLOW_PROJECT_ID,
                                                                      get_sessionid(message["user"]),
                                                                      [clean_msg[:256]],
                                                                      DIALOGFLOW_LANGUAGE_CODE) == "Default Welcome Intent":
-                # say(detect_event_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, "Welcome", DIALOGFLOW_LANGUAGE_CODE))
                 say(detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "Welcome",
                                        DIALOGFLOW_LANGUAGE_CODE))
-
-
-            # elif get_message_count(message["user"]) >= 2 and not get_intent(DIALOGFLOW_PROJECT_ID, SESSION_ID,
-            #                                                                [clean_msg[:256]],
-            #                                                                DIALOGFLOW_LANGUAGE_CODE) == "Default Welcome Intent":
             elif get_message_count(message["user"]) >= 2 and not get_intent(DIALOGFLOW_PROJECT_ID,
                                                                             get_sessionid(message["user"]),
                                                                             [clean_msg[:256]],
                                                                             DIALOGFLOW_LANGUAGE_CODE) == "Default Welcome Intent":
 
-                # answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, "MoreInput", DIALOGFLOW_LANGUAGE_CODE)
                 answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "MoreInput",
                                             DIALOGFLOW_LANGUAGE_CODE)
                 key = message["user"]
@@ -500,8 +453,6 @@ def message_hello(message, say):
                         break
                     elif answer in test[key]:
                         print("ist vorhanden")
-                        # answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, "MoreInput",
-                        #                            DIALOGFLOW_LANGUAGE_CODE)
                         answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "MoreInput",
                                                     DIALOGFLOW_LANGUAGE_CODE)
                     else:
