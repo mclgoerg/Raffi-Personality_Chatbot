@@ -27,6 +27,8 @@ app = App(
 users = []
 # Initialize the dictionary to hold all get to know messages
 gatherInfo = {}
+# Initzialie the dictionary to hold the users from Slack
+users_store = {}
 
 # Regex patterns
 RE_EMOJI = re.compile('\s*:[^:\s]*(?:::[^:\s]*)*:')
@@ -37,7 +39,7 @@ RE_USERID = re.compile("@\w*")
 BIG_FIVE = Helper.loadEnvKey("BIG_FIVE").lower()
 DIALOGFLOW_PROJECT_ID = Helper.loadEnvKey("DIALOGFLOW_PROJECT_ID")
 DIALOGFLOW_LANGUAGE_CODE = Helper.loadEnvKey("DIALOGFLOW_LANGUAGE_CODE")
-
+REQUEST_URL = Helper.loadEnvKey("URL")
 
 def clear_message(text):
     """
@@ -190,7 +192,7 @@ def clear_messages(userid):
 
 def clear_dialogmessages(userid):
     """
-    Clears dialogmessages
+    Clears all dialog messages
     :param userid: Current userid
     :return: None
     """
@@ -203,12 +205,22 @@ def clear_dialogmessages(userid):
 
 
 def get_sessionid(userid):
+    """
+    Gets the current session id
+    :param userid: Current userid
+    :return: None
+    """
     for user in users:
         if userid == user.userId:
             return user.lastSessionId
 
 
 def new_sessionid(userid):
+    """
+    Creates a new sessions id
+    :param userid: Current userid
+    :return: None
+    """
     for user in users:
         if userid == user.userId:
             user.lastSessionId = random.randint(1, 100000)
@@ -216,14 +228,27 @@ def new_sessionid(userid):
 
 
 def save_to_file(content, filename):
+    """
+    Serialize to JSON
+    :param content: Content to save
+    :param filename: Export file name
+    :return: None
+    """
     with open(filename, mode='w') as f:
         f.write(json.dumps(content, indent=4, ensure_ascii=False))
 
 
-# Listen to the team_join event to hear when a
-# user joins a workspace your app is installed on
 @app.event("team_join")
 def team_join(body, client, logger, say):
+    """
+    Listen to the team_join event
+    User joined a workspace
+    :param body:
+    :param client:
+    :param logger:
+    :param say:
+    :return:
+    """
     try:
         # Call the users.info method using the built-in WebClient
         result = client.users_info(
@@ -240,44 +265,53 @@ def team_join(body, client, logger, say):
         logger.error("Error fetching conversations: {}".format(e))
 
 
-users_store = {}
-
-
-# Fetch users using the users.list method
 def fetch_users(client, logger):
+    """
+    Fetch the users from Slack
+    :param client:
+    :param logger:
+    :return: None
+    """
     try:
         # Call the users.list method using the built-in WebClient
-        # users.list requires the users:read scope
         result = client.users_list()
         save_users(result["members"])
-
     except SlackApiError as e:
         logger.error("Error creating conversation: {}".format(e))
 
 
 # Put users into the dict
 def save_users(users_array):
+    """
+    Save the fetched and active users to a file
+    :param users_array: All users from users.list
+    :return: None
+    """
     for user in users_array:
         if not user["deleted"]:
-            # Key user info on their unique user ID
             user_id = user["id"]
-            # Store the entire user object (you may not need all of the info)
+            # Store the entire user object
             users_store[user_id] = user["name"]
-
+    # only user names
     save_to_file(users_store, "users.json")
+    # all user info
     save_to_file(users_array, "users_all.json")
 
 
 @app.message(":del")
-# @app.message(re.compile("".del\s<@\w*>"))
 def message_hello(message, say):
-    print(message["text"])
-    ids = re.findall(r"U\w*", message["text"])
-    for id in ids:
-        if id == message["user"]:
-            print(id)
-            if clear_messages(id):
-                say(f"Ich habe den Verlauf von <@{id}> gelöscht.")
+    """
+    Listen to a message_event
+    Used for deleting the saved chat history
+    :param message: Message from the user
+    :param say:
+    :return: None
+    """
+    userids = re.findall(r"U\w*", message["text"])
+    for userid in userids:
+        if userid == message["user"]:
+            if clear_messages(userid):
+                say(f"Ich habe den Verlauf von <@{userid}> gelöscht.")
                 new_sessionid(message["user"])
                 save_to_file([user.__dict__ for user in users], "output.json")
                 try:
@@ -285,57 +319,63 @@ def message_hello(message, say):
                 except KeyError:
                     print("No data")
             else:
-                say(f"Ich konnte keinen Verlauf von <@{id}> finden.")
+                say(f"Ich konnte keinen Verlauf von <@{userid}> finden.")
         else:
-            say(f"Du hast nicht die benötigten Berechtigungen um den Verlauf von <@{id}> zu löschen.")
+            say(f"Du hast nicht die benötigten Berechtigungen um den Verlauf von <@{userid}> zu löschen.")
 
 
-# Listens to incoming messages that contain anything
 @app.message("")
 def message_hello(message, say):
-    # print(data)
-    print(message)
-    print(message["user"])
-    print("User msg: " + message['text'])
-    # SESSION_ID = message["user"]
+    """
+    Listen to a message_event
+    Message can contain anything
+    Main function for handling the logic between Slack, Dialogflow and MiPinG
+    :param message: Message from the user
+    :param say:
+    :return: None
+    """
+    logging.info("User: " + message["user"] + " wrote " + message['text'])
     clean_msg = clear_message(message['text'])
-    print("Clean msg: " + clean_msg)
-    requestURL = Helper.loadEnvKey("URL")
+    logging("User: " + message["user"] + " wrote clean: " + clean_msg)
+
+    # Check if messsage is valid for further processing
     if len(clean_msg) > 0:
         # Erzeuge users Datei
         fetch_users(app.client, app.logger)
-        # say() sends a message to the channel where the event was triggered
-        # say("Hi" + message["user"])
-        # say(f"Hey there <@{message["user"]}>!")
+
+        # Handle the user input
         handle_user_message(message["user"], clean_msg)
 
-        json_string = json.dumps([user.__dict__ for user in users], ensure_ascii=False).encode("utf-8")
-        print(json_string.decode())
-
-        # detect_intent_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, [clean_msg], DIALOGFLOW_LANGUAGE_CODE)
-
-        # say(detect_intent_texts(DIALOGFLOW_PROJECT_ID, SESSION_ID, [clean_msg], DIALOGFLOW_LANGUAGE_CODE))
-
+        # Prepare data for request
         data = '{"slackMessage":" ' + get_all_messages(message["user"]) + '"}'
 
-        with open('output.json', mode='w') as f:
-            f.write(json.dumps([user.__dict__ for user in users], indent=4, ensure_ascii=False))
+        # Serialize users to JSON
+        save_to_file([user.__dict__ for user in users], "output.json")
 
+        # Random session id for not interupting the current session
         reply = detect_intent_texts(DIALOGFLOW_PROJECT_ID, random.randint(1, 100000), [clean_msg[:256]],
                                     DIALOGFLOW_LANGUAGE_CODE)
+
+        # Checking if the conversation was ended by the user
         if reply[1] == "Goodbye":
             say(reply[0])
+            # Cleaning
             clear_dialogmessages(message["user"])
+            # New ID
             new_sessionid(message["user"])
             save_to_file([user.__dict__ for user in users], "output.json")
             return
+
+        # Welcome message if dialogmessages is empty otherwise continue
         for user in users:
             if user.userId == message["user"]:
                 if reply[1] == "Default Welcome Intent" and len(user.dialogMessages) == 0:
                     say(reply[0])
                     return
 
-        print("DEBUG: Anzahl der Wörter: " + str(get_message_length(message["user"])))
+        logging.info("Total word count: " + str(get_message_length(message["user"])))
+
+        # Got enough messages from the user
         if get_message_length(message["user"]) >= 200:
 
             print("DEBUG: Du hast " + str(get_message_length(message["user"])) + " Wörter geschrieben.")
@@ -347,7 +387,7 @@ def message_hello(message, say):
                             # response = requests.post('http://localhost:9200/slackpost', headers=headers,
                             #                         data=data.encode("utf-8"),
                             #                         verify=False)
-                            response = requests.post(requestURL, headers=headers,
+                            response = requests.post(REQUEST_URL, headers=headers,
                                                      data=data.encode("utf-8"),
                                                      verify=False)
                         except requests.exceptions.RequestException as e:
@@ -393,7 +433,7 @@ def message_hello(message, say):
                                         # response = requests.post('http://localhost:9200/slackpost', headers=headers,
                                         #                         data=data.encode("utf-8"),
                                         #                         verify=False)
-                                        response = requests.post(requestURL, headers=headers,
+                                        response = requests.post(REQUEST_URL, headers=headers,
                                                                  data=data.encode("utf-8"),
                                                                  verify=False)
                                     except requests.exceptions.RequestException as e:
@@ -436,7 +476,7 @@ def message_hello(message, say):
                                         # response = requests.post('http://localhost:9200/slackpost', headers=headers,
                                         #                         data=data.encode("utf-8"),
                                         #                         verify=False)
-                                        response = requests.post(requestURL, headers=headers,
+                                        response = requests.post(REQUEST_URL, headers=headers,
                                                                  data=data.encode("utf-8"),
                                                                  verify=False)
                                     except requests.exceptions.RequestException as e:
@@ -456,6 +496,7 @@ def message_hello(message, say):
 
             save_to_file([user.__dict__ for user in users], "output.json")
 
+        # Get more input from the user for a better big five prediction
         else:
             if get_message_count(message["user"]) == 1 or get_intent(DIALOGFLOW_PROJECT_ID,
                                                                      get_sessionid(message["user"]),
@@ -489,7 +530,7 @@ def message_hello(message, say):
         save_to_file([user.__dict__ for user in users], "output.json")
 
     else:
-        print("Message war zu kurz")
+        logging.info("User: " + message["user"] + " message was too short.")
 
 
 def detect_event_texts(project_id, session_id, event, language_code):
