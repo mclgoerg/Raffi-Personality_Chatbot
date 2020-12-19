@@ -2,8 +2,8 @@ import json
 import os
 import re
 import random
-#from sys import path
 import sys
+import logging
 
 from helper import Helper
 from user import User
@@ -23,64 +23,84 @@ app = App(
     signing_secret=Helper.loadEnvKey("SLACK_SIGNING_SECRET")
 )
 
+# Initialize the list for storing the user objects
 users = []
-test = {}
+# Initialize the dictionary to hold all get to know messages
+gatherInfo = {}
 
+# Regex patterns
 RE_EMOJI = re.compile('\s*:[^:\s]*(?:::[^:\s]*)*:')
 RE_MENTION = re.compile("\s*<@\w*>")
 RE_USERID = re.compile("@\w*")
 
+# Get environment variables
 BIG_FIVE = Helper.loadEnvKey("BIG_FIVE").lower()
-
 DIALOGFLOW_PROJECT_ID = Helper.loadEnvKey("DIALOGFLOW_PROJECT_ID")
 DIALOGFLOW_LANGUAGE_CODE = Helper.loadEnvKey("DIALOGFLOW_LANGUAGE_CODE")
 
 
-def strip_message(text):
+def clear_message(text):
     """
-    @param text:
-    @return:
+    This method cleans the input message from the user.
+    It removes all whitespaces, mentions and emojis
+    :param text: Expects a user message
+    :return: Clean user message
     """
     # remove all whitespaces (space, tab, newline, return, formfeed)
     tmpstr = " ".join(text.split())
     # remove mentions
     tmpstr = RE_MENTION.sub(r"", tmpstr)
     # remove emojis
-    tmpstr = RE_EMOJI.sub(r'', tmpstr)
-
+    tmpstr = RE_EMOJI.sub(r"", tmpstr)
     return tmpstr
 
 
 def initial_import():
+    """
+    Method to import the data from the json file
+    Creates the missing file
+    :return: None
+    """
     if os.path.isfile("output.json"):
         with open("output.json") as f:
             data = json.load(f)
-        print(data)
-
         for user in data:
             users.append(User(**user))
-
-        print([user.__dict__ for user in users])
+        logging.info("Imported users")
     else:
-        print("File is not readable or missing, creating file...")
+        logging.info("File is not readable or missing, creating file...")
         open("output.json", "w")
+        logging.info("New output file was created")
 
 
 def handle_user_message(userid, chat_text):
+    """
+    Method to handle the user input
+    :param userid: Current userid
+    :param chat_text: Text from the user
+    :return: None
+    """
     global users
     if users:
         for user in users:
             if userid == user.userId:
-                # user.messages.append(message["text"])
                 user.messages.append(chat_text)
                 break
         else:
             users.append(User(userid, [chat_text], [], {}, random.randint(1, 100000)))
     else:
         users = [User(userid, [chat_text], [], {}, random.randint(1, 100000))]
+    logging.info("Handled user input")
 
 
+"""
 def handle_user_dialog(userid, dialog_text):
+    
+    Method for handling the dialog
+    :param userid: Current userid
+    :param dialog_text: Text from the user
+    :return: None
+    
     global users
     if users:
         for user in users:
@@ -91,62 +111,95 @@ def handle_user_dialog(userid, dialog_text):
             users.append(User(userid, [], [dialog_text], {}, random.randint(1, 100000)))
     else:
         users = [User(userid, [], [dialog_text], {}, random.randint(1, 100000))]
+    logging.info("Handled dialog messages")
+"""
 
 
 def addBigFive(userid, bigFive):
+    """
+    Adds the big five result to the user object
+    :param userid: Current userid
+    :param bigFive: Result of the big five analysis
+    :return: None
+    """
     for user in users:
         if userid == user.userId:
             user.bigFive = bigFive
 
 
 def get_message_length(userid):
+    """
+    Gets the total message length
+    :param userid: Current userid
+    :return: length of all messages of the current user
+    """
     for user in users:
         if userid == user.userId:
             return len(" ".join(user.messages).split())
 
 
 def get_all_messages(userid):
+    """
+    Gets all messages
+    :param userid: Current userid
+    :return: all messages of the current user as a single string
+    """
     for user in users:
         if userid == user.userId:
             return " ".join(user.messages)
 
 
 def get_message_count(userid):
+    """
+    Gets the count of messages
+    :param userid: Current userid
+    :return: count of all messages
+    """
     for user in users:
         if userid == user.userId:
-            print(len(user.messages))
             return len(user.messages)
 
 
+"""
 def write_json(data, filename='output.json'):
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
+"""
 
 
 def clear_messages(userid):
+    """
+    Clears the stored messages, bigfive and dialogmessages of a user
+    :param userid: Current userid
+    :return:
+    """
     for user in users:
         if userid == user.userId and len(user.messages) != 0:
-            print(user.messages)
             user.messages.clear()
             try:
                 user.bigFive.clear()
             except KeyError:
-                print("No Big Five Data")
+                logging.error("No Big Five Data")
             try:
                 user.dialogMessages.clear()
             except KeyError:
-                print("No dialog messages")
+                logging.error("No dialog messages")
             return True
     return False
 
 
 def clear_dialogmessages(userid):
+    """
+    Clears dialogmessages
+    :param userid: Current userid
+    :return: None
+    """
     for user in users:
         if userid == user.userId:
             try:
                 user.dialogMessages.clear()
             except KeyError:
-                print("No dialog messages")
+                logging.error("No dialog messages")
 
 
 def get_sessionid(userid):
@@ -228,7 +281,7 @@ def message_hello(message, say):
                 new_sessionid(message["user"])
                 save_to_file([user.__dict__ for user in users], "output.json")
                 try:
-                    test[message["user"]].clear()
+                    gatherInfo[message["user"]].clear()
                 except KeyError:
                     print("No data")
             else:
@@ -242,18 +295,18 @@ def message_hello(message, say):
 def message_hello(message, say):
     # print(data)
     print(message)
-    print(message['user'])
+    print(message["user"])
     print("User msg: " + message['text'])
-    # SESSION_ID = message['user']
-    clean_msg = strip_message(message['text'])
+    # SESSION_ID = message["user"]
+    clean_msg = clear_message(message['text'])
     print("Clean msg: " + clean_msg)
     requestURL = Helper.loadEnvKey("URL")
     if len(clean_msg) > 0:
         # Erzeuge users Datei
         fetch_users(app.client, app.logger)
         # say() sends a message to the channel where the event was triggered
-        # say("Hi" + message['user'])
-        # say(f"Hey there <@{message['user']}>!")
+        # say("Hi" + message["user"])
+        # say(f"Hey there <@{message["user"]}>!")
         handle_user_message(message["user"], clean_msg)
 
         json_string = json.dumps([user.__dict__ for user in users], ensure_ascii=False).encode("utf-8")
@@ -281,35 +334,7 @@ def message_hello(message, say):
                 if reply[1] == "Default Welcome Intent" and len(user.dialogMessages) == 0:
                     say(reply[0])
                     return
-        """
-        else:
-            with open('output.json') as feedjson:
-                feeds = json.load(feedjson)
-            feeds.append(outp)
-            with open('output.json', mode='w') as f:
-                f.write(json.dumps(outp, indent=4))
-        """
 
-        # write_json(json.dumps([user.__dict__ for user in users], indent=4, sort_keys=False))
-        # json_objects = [user.to_json() for user in users]
-        # print(json_objects)
-
-        """
-        user_getter = attrgetter('userId')
-        if users:
-            if user_getter((user for user in users)) is not None:
-                user_getter(user for user in users).append(message["text"])
-            else:
-                users.append(User(message["user"], [message["text"]]))
-        else:
-            users = [User(message["user"], [message["text"]])]
-        # for user in users:
-        #    if message["user"] not in user
-        #if User.userId(message["user"]) not in users:
-        #    users.append(User(message["user"], [message["text"]]))
-    
-        print(users)
-        """
         print("DEBUG: Anzahl der Wörter: " + str(get_message_length(message["user"])))
         if get_message_length(message["user"]) >= 200:
 
@@ -319,7 +344,7 @@ def message_hello(message, say):
                 if user.userId == message["user"]:
                     if len(user.dialogMessages) == 0:
                         try:
-                            #response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                            # response = requests.post('http://localhost:9200/slackpost', headers=headers,
                             #                         data=data.encode("utf-8"),
                             #                         verify=False)
                             response = requests.post(requestURL, headers=headers,
@@ -338,7 +363,6 @@ def message_hello(message, say):
 
                         addBigFive(message["user"], result)
                         print([user.__dict__ for user in users])
-
 
             for user in users:
                 if user.userId == message["user"]:
@@ -366,7 +390,7 @@ def message_hello(message, say):
                                     user.dialogMessages.clear()
                                     new_sessionid(message["user"])
                                     try:
-                                        #response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                                        # response = requests.post('http://localhost:9200/slackpost', headers=headers,
                                         #                         data=data.encode("utf-8"),
                                         #                         verify=False)
                                         response = requests.post(requestURL, headers=headers,
@@ -409,7 +433,7 @@ def message_hello(message, say):
                                     user.dialogMessages.clear()
                                     new_sessionid(message["user"])
                                     try:
-                                        #response = requests.post('http://localhost:9200/slackpost', headers=headers,
+                                        # response = requests.post('http://localhost:9200/slackpost', headers=headers,
                                         #                         data=data.encode("utf-8"),
                                         #                         verify=False)
                                         response = requests.post(requestURL, headers=headers,
@@ -447,20 +471,20 @@ def message_hello(message, say):
                 answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "MoreInput",
                                             DIALOGFLOW_LANGUAGE_CODE)
                 key = message["user"]
-                test.setdefault(key, [])
+                gatherInfo.setdefault(key, [])
                 while True:
-                    if len(test[key]) >= 13:
+                    if len(gatherInfo[key]) >= 13:
                         break
-                    elif answer in test[key]:
+                    elif answer in gatherInfo[key]:
                         print("ist vorhanden")
                         answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "MoreInput",
                                                     DIALOGFLOW_LANGUAGE_CODE)
                     else:
                         print("ist noch nicht vorhanden")
-                        test[key].append(answer)
+                        gatherInfo[key].append(answer)
                         break
 
-                print(test)
+                print(gatherInfo)
                 say(answer)
         save_to_file([user.__dict__ for user in users], "output.json")
 
@@ -547,6 +571,8 @@ def get_intent(project_id, session_id, texts, language_code):
 
 # Start your app
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, filename="raffi.log",
+                        format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%d-%m-%y %H:%M:%S")
     initial_import()
     Helper.loadEnvKey("GOOGLE_APPLICATION_CREDENTIALS")
     session_client = dialogflow.SessionsClient()
