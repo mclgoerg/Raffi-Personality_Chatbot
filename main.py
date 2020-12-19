@@ -41,6 +41,7 @@ DIALOGFLOW_PROJECT_ID = Helper.loadEnvKey("DIALOGFLOW_PROJECT_ID")
 DIALOGFLOW_LANGUAGE_CODE = Helper.loadEnvKey("DIALOGFLOW_LANGUAGE_CODE")
 REQUEST_URL = Helper.loadEnvKey("URL")
 
+
 def clear_message(text):
     """
     This method cleans the input message from the user.
@@ -115,6 +116,22 @@ def handle_user_dialog(userid, dialog_text):
         users = [User(userid, [], [dialog_text], {}, random.randint(1, 100000))]
     logging.info("Handled dialog messages")
 """
+
+
+def getBigFive(data, message):
+    try:
+        response = requests.post(REQUEST_URL, headers=headers,
+                                 data=data.encode("utf-8"),
+                                 verify=False)
+    except requests.exceptions.RequestException as e:
+        print(e)
+        sys.exit(1)
+
+    result = json.loads(response.content.decode("utf-8"))
+    logging.info("BigFive: " + result)
+    result.pop("wordCount", None)
+
+    addBigFive(message, result)
 
 
 def addBigFive(userid, bigFive):
@@ -336,7 +353,7 @@ def message_hello(message, say):
     """
     logging.info("User: " + message["user"] + " wrote " + message['text'])
     clean_msg = clear_message(message['text'])
-    logging("User: " + message["user"] + " wrote clean: " + clean_msg)
+    logging.info("User: " + message["user"] + " wrote clean: " + clean_msg)
 
     # Check if messsage is valid for further processing
     if len(clean_msg) > 0:
@@ -377,32 +394,12 @@ def message_hello(message, say):
 
         # Got enough messages from the user
         if get_message_length(message["user"]) >= 200:
-
-            print("DEBUG: Du hast " + str(get_message_length(message["user"])) + " Wörter geschrieben.")
-
+            logging.info("The user wrote a total of " + str(get_message_length(message["user"])) + " words.")
             for user in users:
                 if user.userId == message["user"]:
                     if len(user.dialogMessages) == 0:
-                        try:
-                            # response = requests.post('http://localhost:9200/slackpost', headers=headers,
-                            #                         data=data.encode("utf-8"),
-                            #                         verify=False)
-                            response = requests.post(REQUEST_URL, headers=headers,
-                                                     data=data.encode("utf-8"),
-                                                     verify=False)
-                        except requests.exceptions.RequestException as e:
-                            print(e)
-                            sys.exit(1)
-
-                        result = json.loads(response.content.decode("utf-8"))
-                        print(result)
-                        # with open("data.json", "w") as outfile:
-                        #      json.dump(result, outfile)
-                        print(json.dumps(result, indent=4, sort_keys=True))
-                        result.pop("wordCount", None)
-
-                        addBigFive(message["user"], result)
-                        print([user.__dict__ for user in users])
+                        getBigFive(data, message["user"])
+                        #print([user.__dict__ for user in users])
 
             for user in users:
                 if user.userId == message["user"]:
@@ -612,7 +609,7 @@ def get_intent(project_id, session_id, texts, language_code):
 
 # Start your app
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, filename="raffi.log",
+    logging.basicConfig(level=logging.INFO, filemode="w", filename="raffi.log",
                         format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%d-%m-%y %H:%M:%S")
     initial_import()
     Helper.loadEnvKey("GOOGLE_APPLICATION_CREDENTIALS")
