@@ -39,6 +39,7 @@ RE_USERID = re.compile("@\w*")
 BIG_FIVE = Helper.loadEnvKey("BIG_FIVE").lower()
 DIALOGFLOW_PROJECT_ID = Helper.loadEnvKey("DIALOGFLOW_PROJECT_ID")
 DIALOGFLOW_LANGUAGE_CODE = Helper.loadEnvKey("DIALOGFLOW_LANGUAGE_CODE")
+DIALOGFLOW_INTENT_GETTOKNOW = Helper.loadEnvKey("GETTOKNOW")
 REQUEST_URL = Helper.loadEnvKey("URL")
 HIGH_VALUE = float(Helper.loadEnvKey("HIGH_VALUE"))
 
@@ -323,6 +324,16 @@ def save_users(users_array):
     save_to_file(users_array, "users_all.json")
 
 
+def getCountGetToKnow(project_id):
+    intents_client = dialogflow.IntentsClient()
+    parent = intents_client.project_agent_path(project_id)
+    intents = intents_client.list_intents(parent)
+    for intent in intents:
+        if intent.display_name == DIALOGFLOW_INTENT_GETTOKNOW:
+            length = int(str(intent.messages[0].text).count('\n'))
+            return length
+
+
 @app.message(":del")
 def message_hello(message, say):
     """
@@ -434,7 +445,8 @@ def message_hello(message, say):
                                                         DIALOGFLOW_LANGUAGE_CODE)
                             user.dialogMessages.append(reply[0])
                             say(reply[0])
-                            # first fallback
+                            # end of conversation
+                            # names of the fallback intents
                             if reply[1] == "schlecht - fallback" or reply[1] == "gut - fallback":
                                 try:
                                     user.dialogMessages.clear()
@@ -457,13 +469,15 @@ def message_hello(message, say):
                                                        DIALOGFLOW_LANGUAGE_CODE)
                             user.dialogMessages.append(reply)
                             say(reply)
+                        # logic for the rest of the conversation paths
                         else:
                             reply = detect_intent_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]),
                                                         [clean_msg[:256]],
                                                         DIALOGFLOW_LANGUAGE_CODE)
                             user.dialogMessages.append(reply[0])
                             say(reply[0])
-
+                            # end of conversation
+                            # names of the fallback intents
                             if reply[1] == "schlecht - fallback - fallback" or reply[1] == "gut - fallback - fallback":
                                 try:
                                     user.dialogMessages.clear()
@@ -478,34 +492,34 @@ def message_hello(message, say):
 
         # Get more input from the user for a better big five prediction
         else:
+            # welcome message
             if get_message_count(message["user"]) == 1 or get_intent(DIALOGFLOW_PROJECT_ID,
                                                                      get_sessionid(message["user"]),
                                                                      [clean_msg[:256]],
                                                                      DIALOGFLOW_LANGUAGE_CODE) == "Default Welcome Intent":
                 say(detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "Welcome",
                                        DIALOGFLOW_LANGUAGE_CODE))
+            # get more input from the user
             elif get_message_count(message["user"]) >= 2 and not get_intent(DIALOGFLOW_PROJECT_ID,
                                                                             get_sessionid(message["user"]),
                                                                             [clean_msg[:256]],
                                                                             DIALOGFLOW_LANGUAGE_CODE) == "Default Welcome Intent":
-
+                # trigger event
                 answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "MoreInput",
                                             DIALOGFLOW_LANGUAGE_CODE)
+                # logic for random answers
                 key = message["user"]
                 gatherInfo.setdefault(key, [])
                 while True:
-                    if len(gatherInfo[key]) >= 13:
+                    #if len(gatherInfo[key]) >= 13:
+                    if len(gatherInfo[key]) >= getCountGetToKnow("subagenttalk-cgfh"):
                         break
                     elif answer in gatherInfo[key]:
-                        print("ist vorhanden")
                         answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "MoreInput",
                                                     DIALOGFLOW_LANGUAGE_CODE)
                     else:
-                        print("ist noch nicht vorhanden")
                         gatherInfo[key].append(answer)
                         break
-
-                print(gatherInfo)
                 say(answer)
         save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME)
 
