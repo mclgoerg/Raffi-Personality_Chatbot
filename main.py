@@ -41,6 +41,8 @@ DIALOGFLOW_PROJECT_ID = Helper.loadEnvKey("DIALOGFLOW_PROJECT_ID")
 DIALOGFLOW_LANGUAGE_CODE = Helper.loadEnvKey("DIALOGFLOW_LANGUAGE_CODE")
 REQUEST_URL = Helper.loadEnvKey("URL")
 
+OUTPUT_FILENAME = "output.json"
+
 
 def clear_message(text):
     """
@@ -64,15 +66,15 @@ def initial_import():
     Creates the missing file
     :return: None
     """
-    if os.path.isfile("output.json"):
-        with open("output.json") as f:
+    if os.path.isfile(OUTPUT_FILENAME):
+        with open(OUTPUT_FILENAME) as f:
             data = json.load(f)
         for user in data:
             users.append(User(**user))
         logging.info("Imported users")
     else:
         logging.info("File is not readable or missing, creating file...")
-        open("output.json", "w")
+        open(OUTPUT_FILENAME, "w")
         logging.info("New output file was created")
 
 
@@ -118,7 +120,12 @@ def handle_user_dialog(userid, dialog_text):
 """
 
 
-def getBigFive(data, message):
+def getBigFive(data):
+    """
+    Gets the big five from a users input
+    :param data: data request string with all user messages
+    :return: big five dimensions
+    """
     try:
         response = requests.post(REQUEST_URL, headers=headers,
                                  data=data.encode("utf-8"),
@@ -128,10 +135,9 @@ def getBigFive(data, message):
         sys.exit(1)
 
     result = json.loads(response.content.decode("utf-8"))
-    logging.info("BigFive: " + result)
+    logging.info("BigFive: " + str(result))
     result.pop("wordCount", None)
-
-    addBigFive(message, result)
+    return result
 
 
 def addBigFive(userid, bigFive):
@@ -330,7 +336,7 @@ def message_hello(message, say):
             if clear_messages(userid):
                 say(f"Ich habe den Verlauf von <@{userid}> gelöscht.")
                 new_sessionid(message["user"])
-                save_to_file([user.__dict__ for user in users], "output.json")
+                save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME)
                 try:
                     gatherInfo[message["user"]].clear()
                 except KeyError:
@@ -367,7 +373,7 @@ def message_hello(message, say):
         data = '{"slackMessage":" ' + get_all_messages(message["user"]) + '"}'
 
         # Serialize users to JSON
-        save_to_file([user.__dict__ for user in users], "output.json")
+        save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME)
 
         # Random session id for not interupting the current session
         reply = detect_intent_texts(DIALOGFLOW_PROJECT_ID, random.randint(1, 100000), [clean_msg[:256]],
@@ -376,11 +382,11 @@ def message_hello(message, say):
         # Checking if the conversation was ended by the user
         if reply[1] == "Goodbye":
             say(reply[0])
-            # Cleaning
+            # Clean up old data
             clear_dialogmessages(message["user"])
-            # New ID
+            # get new id
             new_sessionid(message["user"])
-            save_to_file([user.__dict__ for user in users], "output.json")
+            save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME)
             return
 
         # Welcome message if dialogmessages is empty otherwise continue
@@ -398,7 +404,8 @@ def message_hello(message, say):
             for user in users:
                 if user.userId == message["user"]:
                     if len(user.dialogMessages) == 0:
-                        getBigFive(data, message["user"])
+                        res = getBigFive(data)
+                        addBigFive(message["user"], res)
                         #print([user.__dict__ for user in users])
 
             for user in users:
@@ -426,25 +433,9 @@ def message_hello(message, say):
                                 try:
                                     user.dialogMessages.clear()
                                     new_sessionid(message["user"])
-                                    try:
-                                        # response = requests.post('http://localhost:9200/slackpost', headers=headers,
-                                        #                         data=data.encode("utf-8"),
-                                        #                         verify=False)
-                                        response = requests.post(REQUEST_URL, headers=headers,
-                                                                 data=data.encode("utf-8"),
-                                                                 verify=False)
-                                    except requests.exceptions.RequestException as e:
-                                        print(e)
-                                        sys.exit(1)
-
-                                    result = json.loads(response.content.decode("utf-8"))
-                                    print(result)
-                                    print(json.dumps(result, indent=4, sort_keys=True))
-                                    result.pop("wordCount", None)
-
-                                    addBigFive(message["user"], result)
-                                    print("Cleared dialog messages, updated BigFive")
-                                    print([user.__dict__ for user in users])
+                                    res = getBigFive(data)
+                                    addBigFive(message["user"], res)
+                                    logging.info("Cleared dialog messages, updated BigFive")
                                 except KeyError:
                                     print("No dialog messages")
                     else:
@@ -469,29 +460,13 @@ def message_hello(message, say):
                                 try:
                                     user.dialogMessages.clear()
                                     new_sessionid(message["user"])
-                                    try:
-                                        # response = requests.post('http://localhost:9200/slackpost', headers=headers,
-                                        #                         data=data.encode("utf-8"),
-                                        #                         verify=False)
-                                        response = requests.post(REQUEST_URL, headers=headers,
-                                                                 data=data.encode("utf-8"),
-                                                                 verify=False)
-                                    except requests.exceptions.RequestException as e:
-                                        print(e)
-                                        sys.exit(1)
-
-                                    result = json.loads(response.content.decode("utf-8"))
-                                    print(result)
-                                    print(json.dumps(result, indent=4, sort_keys=True))
-                                    result.pop("wordCount", None)
-
-                                    addBigFive(message["user"], result)
-                                    print("Cleared dialog messages, updated BigFive")
-                                    print([user.__dict__ for user in users])
+                                    res = getBigFive(data)
+                                    addBigFive(message["user"], res)
+                                    logging.info("Cleared dialog messages, updated BigFive")
                                 except KeyError:
-                                    print("No dialog messages")
+                                    logging.error("No dialog messages")
 
-            save_to_file([user.__dict__ for user in users], "output.json")
+            save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME
 
         # Get more input from the user for a better big five prediction
         else:
@@ -524,7 +499,7 @@ def message_hello(message, say):
 
                 print(gatherInfo)
                 say(answer)
-        save_to_file([user.__dict__ for user in users], "output.json")
+        save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME)
 
     else:
         logging.info("User: " + message["user"] + " message was too short.")
