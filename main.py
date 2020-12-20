@@ -102,28 +102,6 @@ def handle_user_message(userid, chat_text):
     logging.info("Handled user input")
 
 
-"""
-def handle_user_dialog(userid, dialog_text):
-    
-    Method for handling the dialog
-    :param userid: Current userid
-    :param dialog_text: Text from the user
-    :return: None
-    
-    global users
-    if users:
-        for user in users:
-            if userid == user.userId:
-                user.dialogMessages.append(dialog_text)
-                break
-        else:
-            users.append(User(userid, [], [dialog_text], {}, random.randint(1, 100000)))
-    else:
-        users = [User(userid, [], [dialog_text], {}, random.randint(1, 100000))]
-    logging.info("Handled dialog messages")
-"""
-
-
 def getBigFive(data):
     """
     Gets the big five from a users input
@@ -187,13 +165,6 @@ def get_message_count(userid):
     for user in users:
         if userid == user.userId:
             return len(user.messages)
-
-
-"""
-def write_json(data, filename='output.json'):
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=2)
-"""
 
 
 def clear_messages(userid):
@@ -307,7 +278,6 @@ def fetch_users(client, logger):
         logger.error("Error creating conversation: {}".format(e))
 
 
-# Put users into the dict
 def save_users(users_array):
     """
     Save the fetched and active users to a file
@@ -326,6 +296,11 @@ def save_users(users_array):
 
 
 def getCountGetToKnow(project_id):
+    """
+    Gets the total number of possible replies
+    :param project_id: Current project_id
+    :return: count of all reply possibilities
+    """
     intents_client = dialogflow.IntentsClient()
     parent = intents_client.project_agent_path(project_id)
     intents = intents_client.list_intents(parent)
@@ -425,7 +400,7 @@ def message_hello(message, say):
 
             for user in users:
                 if user.userId == message["user"]:
-                    #Check if choosen big five value is above a certrain value
+                    # Check if choosen big five value is above a certrain value
                     if user.bigFive["big5_" + BIG_FIVE] >= HIGH_VALUE:
                         logging.info("High value of " + BIG_FIVE + ": " + str(user.bigFive["big5_" + BIG_FIVE]))
                         # check if this was reached before, if not trigger the event
@@ -528,33 +503,34 @@ def message_hello(message, say):
 
 
 def detect_event_texts(project_id, session_id, event, language_code):
+    """
+    Dialogflow: Triggers intent by event
+    :param project_id: dialogflow project id
+    :param session_id: same id to allow continuation of conversations
+    :param event: event to trigger
+    :param language_code: language code
+    :return: Fulfillment text for the event
+    """
     session = session_client.session_path(project_id, session_id)
     event_input = dialogflow.types.EventInput(name=event, language_code=language_code)
     query_input = dialogflow.types.QueryInput(event=event_input)
     try:
         response = session_client.detect_intent(session=session, query_input=query_input)
-
     except InvalidArgument:
         raise
-
-    print('=' * 20)
-    print('Query text: {}'.format(response.query_result.query_text))
-    print('Detected intent: {} (confidence: {})\n'.format(
-        response.query_result.intent.display_name,
-        response.query_result.intent_detection_confidence))
-    print('Fulfillment text: {}\n'.format(
-        response.query_result.fulfillment_text))
     return response.query_result.fulfillment_text
 
 
 def detect_intent_texts(project_id, session_id, texts, language_code):
-    """Returns the result of detect intent with texts as inputs.
-    Using the same `session_id` between requests allows continuation
-    of the conversation."""
-
+    """
+    Dialogflow: Detect intent by input text. Return fulfillment text and intent display name
+    :param project_id: dialogflow project id
+    :param session_id: same id to allow continuation of conversations
+    :param texts: Text to match with intents
+    :param language_code: language code
+    :return: fulfillment text and intent display name
+    """
     session = session_client.session_path(project_id, session_id)
-    print('Session path: {}\n'.format(session))
-
     for text in texts:
         text_input = dialogflow.types.TextInput(
             text=text, language_code=language_code)
@@ -565,23 +541,19 @@ def detect_intent_texts(project_id, session_id, texts, language_code):
 
         except InvalidArgument:
             raise
-
-        print('=' * 20)
-        print('Query text: {}'.format(response.query_result.query_text))
-        print('Detected intent: {} (confidence: {})\n'.format(
-            response.query_result.intent.display_name,
-            response.query_result.intent_detection_confidence))
-        print('Fulfillment text: {}\n'.format(
-            response.query_result.fulfillment_text))
-        # print(response.query_result)
-
     return response.query_result.fulfillment_text, response.query_result.intent.display_name
 
 
 def get_intent(project_id, session_id, texts, language_code):
+    """
+    Dialogflow: Detect intent by input text. Return intent display name
+    :param project_id: dialogflow project id
+    :param session_id: same id to allow continuation of conversations
+    :param texts: Text to match with intents
+    :param language_code: language code
+    :return: fulfillment text and intent display name
+    """
     session = session_client.session_path(project_id, session_id)
-    print('Session path: {}\n'.format(session))
-
     for text in texts:
         text_input = dialogflow.types.TextInput(
             text=text, language_code=language_code)
@@ -592,19 +564,10 @@ def get_intent(project_id, session_id, texts, language_code):
 
         except InvalidArgument:
             raise
-
-        print('=' * 20)
-        print('Query text: {}'.format(response.query_result.query_text))
-        print('Detected intent: {} (confidence: {})\n'.format(
-            response.query_result.intent.display_name,
-            response.query_result.intent_detection_confidence))
-        print('Fulfillment text: {}\n'.format(
-            response.query_result.fulfillment_text))
-
     return response.query_result.intent.display_name
 
 
-# Start your app
+# Starts Raffi
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, filemode="w", filename="raffi.log",
                         format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%d-%m-%y %H:%M:%S")
