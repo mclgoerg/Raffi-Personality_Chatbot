@@ -42,6 +42,7 @@ DIALOGFLOW_LANGUAGE_CODE = Helper.loadEnvKey("DIALOGFLOW_LANGUAGE_CODE")
 DIALOGFLOW_INTENT_GETTOKNOW = Helper.loadEnvKey("GETTOKNOW")
 REQUEST_URL = Helper.loadEnvKey("URL")
 HIGH_VALUE = float(Helper.loadEnvKey("HIGH_VALUE"))
+AGENT_TALK = Helper.loadEnvKey("AGENT_TALK")
 
 # Variable for the output file
 OUTPUT_FILENAME = "output.json"
@@ -511,8 +512,8 @@ def message_hello(message, say):
                 key = message["user"]
                 gatherInfo.setdefault(key, [])
                 while True:
-                    #if len(gatherInfo[key]) >= 13:
-                    if len(gatherInfo[key]) >= getCountGetToKnow("subagenttalk-cgfh"):
+                    # compare count saved replies with count all replies
+                    if len(gatherInfo[key]) >= getCountGetToKnow(AGENT_TALK):
                         break
                     elif answer in gatherInfo[key]:
                         answer = detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]), "MoreInput",
@@ -522,7 +523,6 @@ def message_hello(message, say):
                         break
                 say(answer)
         save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME)
-
     else:
         logging.info("User: " + message["user"] + " message was too short.")
 
