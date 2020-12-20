@@ -40,7 +40,9 @@ BIG_FIVE = Helper.loadEnvKey("BIG_FIVE").lower()
 DIALOGFLOW_PROJECT_ID = Helper.loadEnvKey("DIALOGFLOW_PROJECT_ID")
 DIALOGFLOW_LANGUAGE_CODE = Helper.loadEnvKey("DIALOGFLOW_LANGUAGE_CODE")
 REQUEST_URL = Helper.loadEnvKey("URL")
+HIGH_VALUE = float(Helper.loadEnvKey("HIGH_VALUE"))
 
+# Variable for the output file
 OUTPUT_FILENAME = "output.json"
 
 
@@ -389,7 +391,7 @@ def message_hello(message, say):
             save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME)
             return
 
-        # Welcome message if dialogmessages is empty otherwise continue
+        # Welcome message if dialog messages is empty otherwise continue
         for user in users:
             if user.userId == message["user"]:
                 if reply[1] == "Default Welcome Intent" and len(user.dialogMessages) == 0:
@@ -399,20 +401,23 @@ def message_hello(message, say):
         logging.info("Total word count: " + str(get_message_length(message["user"])))
 
         # Got enough messages from the user
+        # Getting big five and starting the conversation
         if get_message_length(message["user"]) >= 200:
             logging.info("The user wrote a total of " + str(get_message_length(message["user"])) + " words.")
+            # Get the big five for the current user
             for user in users:
                 if user.userId == message["user"]:
                     if len(user.dialogMessages) == 0:
                         res = getBigFive(data)
                         addBigFive(message["user"], res)
-                        #print([user.__dict__ for user in users])
 
             for user in users:
                 if user.userId == message["user"]:
-
-                    if user.bigFive["big5_" + BIG_FIVE] >= 0.6:
-                        print("hoher wert " + BIG_FIVE + ": " + str(user.bigFive["big5_" + BIG_FIVE]))
+                    #Check if choosen big five value is above a certrain value
+                    if user.bigFive["big5_" + BIG_FIVE] >= HIGH_VALUE:
+                        logging.info("High value of " + BIG_FIVE + ": " + str(user.bigFive["big5_" + BIG_FIVE]))
+                        # check if this was reached before, if not trigger the event
+                        # if high value -> low agreeableness
                         if len(user.dialogMessages) == 0:
                             say(detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]),
                                                    "abschluss_kennenlernen",
@@ -422,24 +427,27 @@ def message_hello(message, say):
                                                        DIALOGFLOW_LANGUAGE_CODE)
                             user.dialogMessages.append(reply)
                             say(reply)
+                        # logic for the rest of the conversation paths
                         else:
                             reply = detect_intent_texts(DIALOGFLOW_PROJECT_ID,
-                                                        get_sessionid(message["user"])[clean_msg[:256]],
+                                                        get_sessionid(message["user"]), [clean_msg[:256]],
                                                         DIALOGFLOW_LANGUAGE_CODE)
                             user.dialogMessages.append(reply[0])
                             say(reply[0])
-
+                            # first fallback
                             if reply[1] == "schlecht - fallback" or reply[1] == "gut - fallback":
                                 try:
                                     user.dialogMessages.clear()
                                     new_sessionid(message["user"])
                                     res = getBigFive(data)
                                     addBigFive(message["user"], res)
-                                    logging.info("Cleared dialog messages, updated BigFive")
+                                    logging.info("Cleared dialog messages and updated BigFive")
                                 except KeyError:
-                                    print("No dialog messages")
+                                    logging.error("No dialog messages")
                     else:
-                        print("niedriger wert " + BIG_FIVE + ": " + str(user.bigFive["big5_" + BIG_FIVE]))
+                        logging.info("Low value of " + BIG_FIVE + ": " + str(user.bigFive["big5_" + BIG_FIVE]))
+                        # check if this was reached before, if not trigger the event
+                        # if low value -> high agreeableness
                         if len(user.dialogMessages) == 0:
                             say(detect_event_texts(DIALOGFLOW_PROJECT_ID, get_sessionid(message["user"]),
                                                    "abschluss_kennenlernen",
@@ -466,7 +474,7 @@ def message_hello(message, say):
                                 except KeyError:
                                     logging.error("No dialog messages")
 
-            save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME
+            save_to_file([user.__dict__ for user in users], OUTPUT_FILENAME)
 
         # Get more input from the user for a better big five prediction
         else:
