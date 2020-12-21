@@ -31,7 +31,7 @@ gatherInfo = {}
 users_store = {}
 
 # Regex patterns
-RE_EMOJI = re.compile('\s*:[^:\s]*(?:::[^:\s]*)*:')
+RE_EMOJI = re.compile("\s*:[^:\s]*(?:::[^:\s]*)*:")
 RE_MENTION = re.compile("\s*<@\w*>")
 RE_USERID = re.compile("@\w*")
 
@@ -113,7 +113,7 @@ def getBigFive(data):
                                  data=data.encode("utf-8"),
                                  verify=False)
     except requests.exceptions.RequestException as e:
-        print(e)
+        logging.error(e)
         sys.exit(1)
 
     result = json.loads(response.content.decode("utf-8"))
@@ -232,7 +232,7 @@ def save_to_file(content, filename):
     :param filename: Export file name
     :return: None
     """
-    with open(filename, mode='w') as f:
+    with open(filename, mode="w") as f:
         f.write(json.dumps(content, indent=4, ensure_ascii=False))
 
 
@@ -306,7 +306,7 @@ def getCountGetToKnow(project_id):
     intents = intents_client.list_intents(parent)
     for intent in intents:
         if intent.display_name == DIALOGFLOW_INTENT_GETTOKNOW:
-            length = int(str(intent.messages[0].text).count('\n'))
+            length = int(str(intent.messages[0].text).count("\n"))
             return length
 
 
@@ -329,7 +329,7 @@ def message_hello(message, say):
                 try:
                     gatherInfo[message["user"]].clear()
                 except KeyError:
-                    print("No data")
+                    logging.error("No data")
             else:
                 say(f"Ich konnte keinen Verlauf von <@{userid}> finden.")
         else:
@@ -347,7 +347,7 @@ def message_hello(message, say):
     :return: None
     """
     logging.info("User: " + message["user"] + " wrote " + message['text'])
-    clean_msg = clear_message(message['text'])
+    clean_msg = clear_message(message["text"])
     logging.info("User: " + message["user"] + " wrote clean: " + clean_msg)
 
     # Check if messsage is valid for further processing
