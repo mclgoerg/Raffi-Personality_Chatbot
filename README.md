@@ -50,6 +50,8 @@ PORT=3000
 BIG_FIVE=
 # decimal between 0 and 1
 HIGH_VALUE=0.6
+# number of words before big five analysis
+LIMIT=200
 
 #Dialogflow
 DIALOGFLOW_PROJECT_ID=
@@ -61,11 +63,11 @@ AGENT_TALK=
 #Google
 GOOGLE_APPLICATION_CREDENTIALS=private_key.json
 
-#MiPing
+#MiPinG
 URL=http://localhost:8000/slackpost
 
 ```
-
+---
 SLACK_SIGNING_SECRET and SLACK_BOT_TOKEN are both from the slack API  
 
 PORT 3000 is default for ngrok  
@@ -74,15 +76,21 @@ BIG_FIVE choose one value, the bot is low or high agreeable - this has to be cha
 
 HIGH_VALUE can be any decimal (float) between 0 and 1
 
+LIMIT is the minimum message limit for the big five analysis (default 200)  
+
 DIALOGFLOW_PROJECT_ID is the ID of the mega agent  
 
 DIALOGFLOW_LANGUAGE_CODE de for german, en for english  
 
 GETTOKNOW is the event for getting the user to know if the messages are below the limit
 
+AGENT_TALK is the project ID of the talk agent  
 
+GOOGLE_APPLICATION_CREDENTIALS are the authtoken exported to json
 
+URL is the API app route for MiPinG requests
 
+---
 To run the application
 ```bash
 python3 main.py
