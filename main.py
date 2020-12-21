@@ -37,6 +37,7 @@ RE_USERID = re.compile("@\w*")
 
 # Get environment variables
 BIG_FIVE = Helper.loadEnvKey("BIG_FIVE").lower()
+LIMIT = int(Helper.loadEnvKey("LIMIT").lower())
 DIALOGFLOW_PROJECT_ID = Helper.loadEnvKey("DIALOGFLOW_PROJECT_ID")
 DIALOGFLOW_LANGUAGE_CODE = Helper.loadEnvKey("DIALOGFLOW_LANGUAGE_CODE")
 DIALOGFLOW_INTENT_GETTOKNOW = Helper.loadEnvKey("GETTOKNOW")
@@ -389,7 +390,7 @@ def message_hello(message, say):
 
         # Got enough messages from the user
         # Getting big five and starting the conversation
-        if get_message_length(message["user"]) >= 200:
+        if get_message_length(message["user"]) >= LIMIT:
             logging.info("The user wrote a total of " + str(get_message_length(message["user"])) + " words.")
             # Get the big five for the current user
             for user in users:

@@ -35,6 +35,53 @@ pip install .
 
 Rename .env.example to .env  
 Fill the .env  
+Below is an example with explanation
+
+```bash
+# Slack
+SLACK_SIGNING_SECRET=
+SLACK_BOT_TOKEN=
+
+#ngrok
+PORT=3000
+
+#BigFive Dimension
+## agreeableness, conscientiousness, extraversion, neuroticism, openness
+BIG_FIVE=
+# decimal between 0 and 1
+HIGH_VALUE=0.6
+
+#Dialogflow
+DIALOGFLOW_PROJECT_ID=
+## e.g.: de/en
+DIALOGFLOW_LANGUAGE_CODE=
+# Intent - GetToKnow
+GETTOKNOW=
+AGENT_TALK=
+#Google
+GOOGLE_APPLICATION_CREDENTIALS=private_key.json
+
+#MiPing
+URL=http://localhost:8000/slackpost
+
+```
+
+SLACK_SIGNING_SECRET and SLACK_BOT_TOKEN are both from the slack API  
+
+PORT 3000 is default for ngrok  
+
+BIG_FIVE choose one value, the bot is low or high agreeable - this has to be changed in the code  
+
+HIGH_VALUE can be any decimal (float) between 0 and 1
+
+DIALOGFLOW_PROJECT_ID is the ID of the mega agent  
+
+DIALOGFLOW_LANGUAGE_CODE de for german, en for english  
+
+GETTOKNOW is the event for getting the user to know if the messages are below the limit
+
+
+
 
 To run the application
 ```bash
