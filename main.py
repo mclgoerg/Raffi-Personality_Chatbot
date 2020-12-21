@@ -400,7 +400,7 @@ def message_hello(message, say):
 
             for user in users:
                 if user.userId == message["user"]:
-                    # Check if choosen big five value is above a certrain value
+                    # Check if choosen big five value is above a certain value
                     if user.bigFive["big5_" + BIG_FIVE] >= HIGH_VALUE:
                         logging.info("High value of " + BIG_FIVE + ": " + str(user.bigFive["big5_" + BIG_FIVE]))
                         # check if this was reached before, if not trigger the event
