@@ -18,8 +18,8 @@ pip install pip --upgrade
 
 Create the virtual environment and activate it
 ```bash
-python3.8 -m venv tutorial-env
-source tutorial-env/bin/activate
+python3.8 -m venv raffi-env
+source raffi-env/bin/activate
 ```
 Clone this repo on the same VM as MiPinG
 
