@@ -97,7 +97,8 @@ def handle_user_message(userid, chat_text):
                 user.messages.append(chat_text)
                 break
         else:
-            users.append(User(userid, [chat_text], [], {}, random.randint(1, 100000)))
+            users.append(User(userid, [chat_text], [], {},
+                              random.randint(1, 100000)))
     else:
         users = [User(userid, [chat_text], [], {}, random.randint(1, 100000))]
     logging.info("Handled user input")
@@ -218,7 +219,7 @@ def new_sessionid(userid):
     """
     Creates a new sessions id
     :param userid: Current userid
-    :return: None
+    :return: New user id
     """
     for user in users:
         if userid == user.userId:
