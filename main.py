@@ -243,11 +243,11 @@ def team_join(body, client, logger, say):
     """
     Listen to the team_join event
     User joined a workspace
-    :param body:
-    :param client:
-    :param logger:
-    :param say:
-    :return:
+    :param body: Dict which contains the request body
+    :param client: Web API Client OAuth
+    :param logger: Logger
+    :param say: Utility to send a message to the channel
+    :return: none
     """
     try:
         # Call the users.info method using the built-in WebClient
@@ -317,8 +317,8 @@ def message_hello(message, say):
     """
     Listen to a message_event
     Used for deleting the saved chat history
-    :param message: Message from the user
-    :param say:
+    :param message: Payload - Message from the user
+    :param say: Utility to send a message to the channel
     :return: None
     """
     userids = re.findall(r"U\w*", message["text"])
@@ -344,8 +344,8 @@ def message_hello(message, say):
     Listen to a message_event
     Message can contain anything
     Main function for handling the logic between Slack, Dialogflow and MiPinG
-    :param message: Message from the user
-    :param say:
+    :param message: Payload - Message from the user
+    :param say: Utility to send a message to the channel
     :return: None
     """
     logging.info("User: " + message["user"] + " wrote " + message['text'])
